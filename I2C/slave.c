@@ -1,75 +1,109 @@
 #define RCC_BASE (0x40023800)
 #define GPIOB_BASE (0x40020400)
-#define I2C_BASE (0x40005400)
-#define TIME2_BASE (0x40000000)
-
-#define RCC_AHB1ENR (*(volatile unsinged int *)(RCC_BASE + 0x30))
-#define RCC_APB1ENR (*(volatile unsinged int *)(RCC_BASE + 0x40))
-
-#define GPIOB_MODER (*(volatile unsinged int *)(GPIOB_BASE + 0x00))
-#define GPIOB_OTYPER (*(volatile unsinged int *)(GPIOB_BASE + 0x04))
-#define GPIOB_PUPDR (*(volatile unsinged int *)(GPIOB_BASE + 0x0C))
-#define GPIOB_ODR (*(volatile unsinged int *)(GPIOB_BASE + 0x14))
-#define GPIOB_AFRH (*(volatile unsinged int *)(GPIOB_BASE + 0x24))
+#define I2C1_BASE (0x40005400)
+#define TIM2_BASE (0x40000000)
 
 
-#define I2C_CR1 (*(volatile unsinged int *)(I2C_BASE + 0x00))
-#define I2C_CR2 (*(volatile unsinged int *)(I2C_BASE + 0x04))
-#define I2C_DR (*(volatile unsinged int *)(I2C_BASE + 0x10))
-#define I2C_SR1 (*(volatile unsinged int *)(I2C_BASE + 0x14))
-#define I2C_SR2 (*(volatile unsinged int *)(I2C_BASE + 0x18))
-#define I2C_CCR (*(volatile unsinged int *)(I2C_BASE + 0x1C))
-#define i2C_TRISE (*(volatile unsinged int *)(I2C_BASE + 0x20))
-void I2C_INIT();
-void I2C_READ(int n , char* str);
+
+#define RCC_AHB1ENR (*(volatile unsigned int*)( RCC_BASE + 0x30))
+#define GPIOB_MODER (*(volatile unsigned int*)(GPIOB_BASE + 0))
+#define GPIOB_OTYPER (*(volatile unsigned int*)(GPIOB_BASE + 0x04))
+#define GPIOB_PUPDR (*(volatile unsigned int*)(GPIOB_BASE + 0x0C))
+#define GPIOB_AFRH (*(volatile unsigned int *)(GPIOB_BASE + 0x24))
+#define RCC_APB1ENR (*(volatile unsigned int*)(RCC_BASE + 0x40))
+#define I2C1_CR1 (*(volatile unsigned int* )(I2C1_BASE + 0))
+#define I2C1_CR2 (*(volatile unsigned int*)(I2C1_BASE + 0x04))
+#define I2C1_CCR (*(volatile unsigned int*)(I2C1_BASE + 0x1C))
+#define I2C1_TRISE (*(volatile unsigned int*)(I2C1_BASE + 0x20))
+
+// DEFINATION for Send Function
+#define I2C1_SR2 (*(volatile unsigned int*)(I2C1_BASE + 0x18))
+#define I2C1_SR1 (*(volatile unsigned int*)(I2C1_BASE + 0x14))
+#define I2C1_DR (*(volatile unsigned int *)(I2C1_BASE + 0x10))
+#define I2C1_OAR1 (*(volatile unsigned int *)(I2C1_BASE + 0x08))
+
+
+void I2C1_Init();
+void I2C1_Read(int n, char* str);
+
 int main(){
-    I2C_INIT();
-    char str[6];
-    while(1){
-        I2C_READ(6, str);
-    }
+	I2C1_Init();
+	char str[6];
+	while(1){
+//I2C1_Send(0x12, 6, "CSE_RU");
+
+		I2C1_Read(6, str);
+	}
 }
 
-I2C_INIT(){
-    RCC_AHB1ENR |=(1<<1);
+void I2C1_Init(){
+	//Enable the clock
+	RCC_AHB1ENR |= (1<<1);
 
-    GPIOB_MODER |=(1<<19);
-    GPIOB_MODER &=~(1<<18);
-    GPIOB_MODER |=(1<<17);
-    GPIOB_MODER &=~(1<<16);
+	// Alternate mode selection
+	GPIOB_MODER |=(1<<19);
+	GPIOB_MODER |=(1<<17);
+	GPIOB_MODER &=~(1<<18);
+	GPIOB_MODER &=~(1<<16);
 
-    GPIOB_OTYPER |=(1<<8);
-    GPIOB_OTYPER |=(1<<9);
+	// Output typer = Open drain
+	GPIOB_OTYPER |=(1<<8);
+	GPIOB_OTYPER |=(1<<9);
 
-    GPIOB_PUPDR |=(1<<18);
-    GPIOB_PUPDR &=~(1<<19);
-    GPIOB_PUPDR |=(1<<16);
-    GPIOB_PUPDR &=~(1<<17);   
+	// Make Pull up of for the SCL and SDA line
+	GPIOB_PUPDR |= (1<<18);
+	GPIOB_PUPDR |= (1<<16);
+	GPIOB_PUPDR &= ~(1<<17);
+	GPIOB_PUPDR &= ~(1<<19);
 
-    GPIOB_AFRH &=~(0xFF<<0);
-    GPIOB_AFRH |= (1<<2);
-    GPIOB_AFRH |=(1<<6);
+	// Make sure you use the I2C1 as SDA and SCL line
+	GPIOB_AFRH &= ~(0xFF<<0);
+	GPIOB_AFRH |= (1<<2);
+	GPIOB_AFRH |= (1<<6);
 
-    RCC_APB1ENR |=(1<<21);
+	// Clock Enable for APB1
+	RCC_APB1ENR|=(1<<21);
 
-    I2C_CR1 |=(1<<15);
-    I2C_CR1 &=~(1<<15);
+	//Reset the I2C_CR1 register
+	I2C1_CR1 |= (1<<15);
+	// Return it at the previous stare
+	I2C1_CR1 &= ~(1<<15);
 
-    I2C_CR2 |=(1<<4);
+	//Make the PCLK = 16 MHz
+	I2C1_CR2 |=(1<<4);
 
-    I2C_CCR = 80 ;
-    I2C_TRISE = 17;
+	// set slave address
+	I2C1_OAR1 = (0x12<<1);
 
-    I2C_CR1 |=(1<<0);
+	//Enable slave address
+	I2C1_OAR1 |= (1<<14);
+
+	// Periferal Enable
+	I2C1_CR1 |= (1<<0);
+
+
 }
-void I2C_READ(int n, char* str){
-    I2C_CR1 |=(1<<10);
-    while(!(I2C_SR1 &(1<<1))){}
-    (void)I2C_SR2;
-    for(int i=0;i<n;i++){
-        while(!(I2C_SR1 & (1<<6))){}
-        srt[i]=I2C_DR;
 
-    }
-    I2C_CR1 &=~(1<<10);
+void I2C1_Read(int n, char* str){
+
+
+	//Enable acknowlege bit
+	I2C1_CR1 |=(1<<10);
+
+	// Wait untill the address bit is set
+
+
+	while(!(I2C1_SR1 & (1<<1))){}
+	(void)I2C1_SR2;
+	for(int i=0;i<n;i++){
+		while(!(I2C1_SR1 & (1<<6))){}
+		str[i] = I2C1_DR;
+	}
+
+	I2C1_CR1 &= ~(1<<10);
+
+
+
+
+
 }
